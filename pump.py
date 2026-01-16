@@ -7,8 +7,14 @@ class Pump(Drawable):
 
     def draw(self, canvas):
         canvas.create_oval(
-            self.x - 12, self.y - 12,
-            self.x + 12, self.y + 12,
-            width=2
+            self.x - 15, self.y - 15,
+            self.x + 15, self.y + 15,
+            fill="#4444aa",
+            outline=""
         )
-        canvas.create_text(self.x, self.y, text="P")
+
+        canvas.create_text(
+            self.x, self.y + 25,
+            text="Pompa",
+            fill="white"
+        )

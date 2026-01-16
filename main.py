@@ -7,16 +7,22 @@ from pipe import ThickPipe
 from coil import CoilPipe
 
 root = tk.Tk()
-root.title("SCADA - Destylator")
-canvas = tk.Canvas(root, width=1000, height=500, bg="white")
+root.title("SCADA – Destylator")
+
+canvas = tk.Canvas(
+    root,
+    width=1000,
+    height=500,
+    bg="#A5B272"
+)
 canvas.pack()
 
 elements = []
 
-# ZBIORNIKI (jak na rysunku: od prawej)
+# ZBIORNIKI (od prawej)
 T1 = Tank(760, 220, 120, 100, "T1 - Braga")
-T2 = Tank(560, 200, 120, 60, "T2 - Filtr") #prawo, dol, szerokosc (w prawo), wysokosc (w dol) 
-T3 = Tank(330, 200, 140, 220, "T3 - Chłodnica")
+T2 = Tank(560, 200, 120, 60, "T2 - Filtr")
+T3 = Tank(330, 200, 120, 220, "T3 - Chłodnica")
 T4 = Tank(80, 370, 120, 80, "T4 - Produkt")
 
 elements += [T1, T2, T3, T4]
@@ -24,33 +30,43 @@ elements += [T1, T2, T3, T4]
 # GRZAŁKA
 elements.append(Heater(820, 340))
 
-# CIĄGŁA RURA: T1 → T2 → T3
+# RURA PAROWA T1 → T2 → T3
 pipe = ThickPipe()
-
-pipe.add(820, 220, 820, 180)     # z góry T1
-pipe.add(820, 180, 620, 180)
-pipe.add(620, 180, 620, 220)     # do T2
-pipe.add(620, 220, 410, 220)
-
+pipe.add_point(820, 220)
+pipe.add_point(820, 180)
+pipe.add_point(620, 180)
+pipe.add_point(620, 220)
+pipe.add_point(410, 220)
 elements.append(pipe)
 
-# WĘŻOWNICA (CIĄGŁA CZĘŚĆ RURY)
+# WĘŻOWNICA
 coil = CoilPipe(
-    x=410, #wiecej daje w prawo
-    y=220, #wiecej daje w dol
+    x=410,
+    y=220,
     height=160,
     loops=6
 )
 elements.append(coil)
 
-# WYJŚCIE Z CHŁODNICY → T4 (jak na czerwono)
+# WYJŚCIE DO T4
 pipe_out = ThickPipe()
-pipe_out.add(410, 380, 180, 380) #prawo B, dol B, prawo A, dol A
-
+pipe_out.add_point(415, 380)
+pipe_out.add_point(180, 380)
 elements.append(pipe_out)
 
-# POMPA (symbolicznie)
-elements.append(Pump(300, 260))
+# RURY WODY CHŁODZĄCEJ (T3)
+cold_in = ThickPipe(offset=4, fill="#8fd3ff")
+cold_in.add_point(330, 240)
+cold_in.add_point(290, 240)
+elements.append(cold_in)
+
+hot_out = ThickPipe(offset=4, fill="#ffb347")
+hot_out.add_point(330, 360)
+hot_out.add_point(290, 360)
+elements.append(hot_out)
+
+# POMPA
+elements.append(Pump(300, 300))
 
 # RYSOWANIE
 for e in elements:
