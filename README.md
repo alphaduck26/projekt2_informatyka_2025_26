@@ -4,3 +4,4 @@ V1: stworzenie szkieletu ukladu, wstepnie brak jakichkolwiek funkcji
 V2: optymalizacja wizualizacji, dodanie nowych elementow drugorzednych dla przyszlych funkcji
 V3: wprowadzenie pierwszych funkcji: dzialajacy piec, dodana mechanika zmiany poziomu plynu w 1 pojemniku + mechanika wyparowywania cieczy
 V4: dodano prymitywna mechanike filtra z opcja jego wymiany podczas zatkania
+V5: interfejs uzytkownika zostal optymalizowany, przyciski sa opisane dokladniej, dodana mechanika przegrzania chlodnicy i wymiana wody (P.S. Podczas zatkania/przegrzania proces destylacji sie hamuje). Z para wystapil bug, z powodu ktorego sie nie wyswietla
