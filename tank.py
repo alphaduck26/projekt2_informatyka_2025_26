@@ -1,125 +1,117 @@
 from drawable import Drawable
 
-
 class Tank(Drawable):
-    def __init__(self, x, y, w, h, label):
-        self.x = x
-        self.y = y
-        self.w = w
-        self.h = h
+    def __init__(self, x, y, w, h, label, color,
+                 level=0.0, is_filter=False, is_cooler=False):
+        self.x, self.y, self.w, self.h = x, y, w, h
         self.label = label
+        self.color = color
+        self.level = level
 
-        self.level = 0.0
-        self.anim_id = 0  # identyfikator animacji
+        self.animating = False
+        self.is_filter = is_filter
+        self.is_cooler = is_cooler
 
-        # FILTR
-        self.is_filter = "Filtr" in label
-        self.dirt = 0.0
-        self.blocked = False
-
-        if "Braga" in label:
-            self.base_color = "#5F9EA0"
-        elif self.is_filter:
-            self.base_color = "#8fd3ff"
-        elif "Chłodnica" in label:
-            self.base_color = "#8fd3ff"
-        elif "Produkt" in label:
-            self.base_color = "#7FFFD4"
-        else:
-            self.base_color = None
-
-    # ================= KOLORY =================
-
-    def liquid_color(self):
-        if not self.is_filter:
-            return self.base_color
-
-        # interpolacja koloru filtra (czysty → brudny)
-        r = int(0x8f + self.dirt * (0x55 - 0x8f))
-        g = int(0xd3 + self.dirt * (0x30 - 0xd3))
-        b = int(0xff + self.dirt * (0x10 - 0xff))
-        return f"#{r:02x}{g:02x}{b:02x}"
-
-    # ================= RYSOWANIE =================
+        self.filter_dirty = 0.0
+        self.temperature = 20.0
+        self.max_temp = 60.0
 
     def draw(self, canvas):
         if self.level > 0:
-            fill_height = self.h * self.level
+            fh = self.h * self.level
             canvas.create_rectangle(
-                self.x + 3,
-                self.y + self.h - fill_height,
-                self.x + self.w - 3,
-                self.y + self.h - 3,
-                fill=self.liquid_color(),
-                outline=""
+                self.x + 3, self.y + self.h - fh,
+                self.x + self.w - 3, self.y + self.h - 3,
+                fill=self.get_color(), outline=""
             )
 
         canvas.create_rectangle(
             self.x, self.y,
-            self.x + self.w,
-            self.y + self.h,
-            outline="black",
-            width=3 if self.blocked else 2
+            self.x + self.w, self.y + self.h,
+            outline="black", width=2
         )
 
-        canvas.create_text(
-            self.x + self.w / 6,
-            self.y - 10,
-            text=self.label,
-            font=("Arial", 10, "bold")
-        )
+        canvas.create_text(self.x + self.w / 2, self.y - 10,
+                           text=self.label, font=("Arial", 10, "bold"))
 
-        if self.is_filter and self.blocked:
-            canvas.create_text(
-                self.x + self.w / 2,
-                self.y + self.h / 2,
-                text="ZATKANY",
-                fill="red",
-                font=("Arial", 10, "bold")
-            )
+    def get_color(self):
+        if self.is_filter:
+            d = self.filter_dirty
+            r = int(120 + d * 80)
+            g = int(200 - d * 120)
+            b = int(120 - d * 100)
+            return f"#{r:02x}{g:02x}{b:02x}"
 
-    # ================= ANIMACJE =================
+        if self.is_cooler:
+            t = min(1.0, self.temperature / self.max_temp)
+            r = int(255 * t)
+            g = int(200 * (1 - t))
+            b = int(255 * (1 - t))
+            return f"#{r:02x}{g:02x}{b:02x}"
 
-    def fill_to(self, canvas, redraw, target=0.9, duration=6000):
-        self.anim_id += 1
-        current_id = self.anim_id
+        return self.color
 
-        steps = max(1, duration // 50)
+    def fill_to(self, canvas, redraw, target, duration):
+        if self.animating:
+            return
+        self.animating = True
+        steps = duration // 50
         delta = (target - self.level) / steps
 
         def step():
-            if current_id != self.anim_id:
-                return
-
-            if (delta > 0 and self.level >= target) or \
-               (delta < 0 and self.level <= target):
-                self.level = max(0.0, min(1.0, target))
+            if abs(self.level - target) < abs(delta):
+                self.level = target
+                self.animating = False
                 redraw()
                 return
-
             self.level += delta
-            self.level = max(0.0, min(1.0, self.level))
             redraw()
             canvas.after(50, step)
 
         step()
 
-    def empty(self, canvas, redraw, duration=4000):
-        self.fill_to(canvas, redraw, target=0.0, duration=duration)
+    def empty(self, canvas, redraw):
+        if self.animating:
+            return
+        self.animating = True
 
-    # ================= PROCES =================
+        def step():
+            if self.level <= 0:
+                self.level = 0
+                self.animating = False
+                redraw()
+                return
+            self.level -= 0.01
+            redraw()
+            canvas.after(50, step)
 
-    def remove_volume(self, amount):
-        self.level = max(0.0, self.level - amount)
+        step()
 
-    def add_dirt(self, amount):
-        if not self.blocked:
-            self.dirt += amount
-            if self.dirt >= 1.0:
-                self.dirt = 1.0
-                self.blocked = True
+    def remove_volume(self, v):
+        self.level = max(0, self.level - v)
+
+    def add_volume(self, v):
+        self.level = min(1.0, self.level + v)
+
+    def filter(self, vapor):
+        if not self.is_filter or self.filter_dirty >= 1:
+            return 0.0
+        efficiency = 1.0 - self.filter_dirty
+        passed = vapor * efficiency
+        self.filter_dirty += vapor * 2
+        self.filter_dirty = min(1.0, self.filter_dirty)
+        return passed
 
     def reset_filter(self):
+        self.filter_dirty = 0.0
         self.level = 0.4
-        self.dirt = 0.0
-        self.blocked = False
+
+    def condense(self, vapor):
+        if not self.is_cooler or self.temperature >= self.max_temp:
+            return 0.0
+        condensed = min(vapor, 0.003)
+        self.temperature += condensed * 50
+        return condensed
+
+    def cool_down(self):
+        self.temperature = 20.0 
