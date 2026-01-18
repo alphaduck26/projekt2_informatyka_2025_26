@@ -24,7 +24,7 @@ T2 = Tank(560,200,120,60,"T2 - Filtr","#8fd3ff",0.4,True)
 T3 = Tank(330,200,120,220,"T3 - Chłodnica","#8fd3ff",0.8,False,True)
 T4 = Tank(80,370,120,80,"T4 - Produkt","#7FFFD4")
 
-elements += [T1,T2,T3,T4]
+elements += [T1, T2, T3, T4]
 
 # ===== PIEC =====
 heater = Heater(820,340)
@@ -50,7 +50,7 @@ cold.add_point(330,240); cold.add_point(290,240)
 hot = ThickPipe(4,"#ffb347")
 hot.add_point(330,360); hot.add_point(290,360)
 
-elements += [pipe1,pipe2,coil,pipe3,cold,hot,Pump(300,300)]
+elements += [pipe1, pipe2, coil, pipe3, cold, hot, Pump(300,300)]
 
 # ===== PARA =====
 v1 = VaporStream(pipe1.points)
@@ -66,20 +66,27 @@ def redraw():
     canvas.delete("all")
     for e in elements:
         e.draw(canvas)
-    for v in (v1,v2,v3,v4):
+    for v in (v1, v2, v3, v4):
         v.draw(canvas)
-    #VaporStream.draw(canvas)
 
 def process():
+    # ===== ZATRZYMANIE PROCESU PODCZAS WYMIANY WODY =====
+    if T2.flushing or T3.flushing:
+        T2.update_flush()
+        T3.update_flush()
+        redraw()
+        root.after(100, process)
+        return
+
     heater.update()
 
-    # PAROWANIE
+    # ===== PAROWANIE =====
     if T1.level > 0 and heater.current_temp > 60:
         rate = (heater.current_temp - 60) / 30 * 0.002
         T1.remove_volume(rate)
         v1.add(rate * 5)
 
-    # FILTR
+    # ===== FILTR =====
     passed = T2.filter(v1.take())
     if T2.filter_dirty >= 1:
         filter_status.set("UWAGA: Filtr zatkany!")
@@ -87,10 +94,10 @@ def process():
         filter_status.set("Filtr: OK")
     v2.add(passed)
 
-    # DO CHŁODNICY
+    # ===== DO CHŁODNICY =====
     v3.add(v2.take())
 
-    # KONDENSACJA
+    # ===== KONDENSACJA =====
     condensed = T3.condense(v3.take())
     if T3.temperature >= T3.max_temp:
         cooler_status.set("UWAGA: Chłodnica przegrzana!")
@@ -100,6 +107,10 @@ def process():
     v4.add(condensed * 4)
     T4.add_volume(v4.take() / 4)
 
+    # ===== AKTUALIZACJA ANIMACJI (na wszelki wypadek) =====
+    T2.update_flush()
+    T3.update_flush()
+
     redraw()
     root.after(100, process)
 
@@ -107,10 +118,10 @@ def process():
 tk.Label(ui, text="Zbiornik T1 – Braga", font=("Arial",10,"bold")).pack(pady=3)
 tk.Label(ui, text="Napełnianie bragi").pack()
 tk.Button(ui, text="Uzupełnij",
-          command=lambda:T1.fill_to(canvas,redraw,0.9,6000)).pack(fill="x")
+          command=lambda: T1.fill_to(canvas, redraw, 0.9, 6000)).pack(fill="x")
 tk.Label(ui, text="Opróżnianie zbiornika").pack()
 tk.Button(ui, text="Opróżnij",
-          command=lambda:T1.empty(canvas,redraw)).pack(fill="x")
+          command=lambda: T1.empty(canvas, redraw)).pack(fill="x")
 
 tk.Label(ui, text="Piec", font=("Arial",10,"bold")).pack(pady=6)
 tk.Label(ui, text="Włącz / wyłącz grzanie").pack()
